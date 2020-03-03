@@ -1,0 +1,6 @@
+name: ICAFlow
+dependencies:
+  - seaborn
+  - tensorflow
+  - tensorflow-probability
+  - numpy
