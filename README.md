@@ -1,1 +1,3 @@
-# Implementations of some flow based non-linear ICA type models in tf
+# ICAFlow
+
+Implementations of some invertible non-linear ICA models in tf
