@@ -2,29 +2,30 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from ..models.real_nvp import RealNVP
+from ..models.gin import GIN
 
 def toy_2d():
     x = get_training_data("Moons", 1000)
-    print(x.shape)
     viz_2d(x)
 
-    real_nvp = RealNVP()
-    real_nvp.build_model(x.shape[1], 10, 5)
+    gin = GIN()
+    gin.build_model(x.shape[-1], 10, 10)
 
-    x_hat = real_nvp.transformed_distribution.sample(1000)
+    x_hat = gin.transformed_distribution.sample(1000)
     viz_2d(x_hat)
 
-    real_nvp.train_model(x, lr=1e-3, n_epochs=1)
+    gin.train_model(x, lr=1e-4, n_epochs=1)
 
-    x_hat = real_nvp.transformed_distribution.sample(1000)
+    x_hat = gin.transformed_distribution.sample(1000)
     viz_2d(x_hat)
+
 
 def viz_2d(data):
     sns.scatterplot(x=data[:,0], y=data[:,1])
     plt.xlim(-2,2)
     plt.ylim(-2,2)
     plt.show()
+
 
 def get_training_data(data_type, n_samples):
     x = np.zeros([n_samples,2], dtype=np.float32)
