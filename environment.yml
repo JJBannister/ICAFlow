@@ -2,5 +2,5 @@ name: ICAFlow
 dependencies:
   - numpy
   - seaborn
-  - tensorflow
+  - tensorflow-gpu
   - tensorflow-probability
