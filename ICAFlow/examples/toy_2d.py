@@ -6,31 +6,40 @@ from tensorflow.keras.optimizers import Adam
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from ..core.gin import gin_flow
+from ..core.gin import GIN
 
 def toy_2d():
 
     # Data
-    x = get_training_data("Small Shifted Normal", 5000)
+    x = get_training_data(data_type=None, n_samples=5000, stddev=[2,4])
     viz_2d(x, "Training Samples")
 
     # Flow
-    flow = gin_flow( x.shape[-1], 12, 8)
-    print(flow.batch_shape)
+    flow = GIN(
+            input_shape=x.shape[-1], 
+            n_coupling_layers=0, 
+            hidden_layer_dim=8,
+            batch_norm=False)
 
-    viz_2d(flow.distribution.sample(5000), 
-            "Base samples")
-    viz_2d(flow.sample(5000), 
-            "Transformed samples (Pre-train)")
+    print(flow.transformed_distribution.trainable_variables)
+
+
+    viz_2d(flow.base_distribution.sample(5000), 
+            "Base Samples")
+    viz_2d(flow.transformed_distribution.sample(5000), 
+            "Target samples (pre-train)")
+
+    print(flow.transformed_distribution.log_prob(x))
+
 
     # Train
-    i = Input(shape=x.shape[-1], dtype=tf.float32)
-    log_prob = flow.log_prob(i)
-    model = Model(i, log_prob)
+    i = Input(shape=x.shape[-1])
+    log_prob = flow.transformed_distribution.log_prob(i)
+    model = Model(i, log_prob) 
     model.compile(optimizer=Adam(lr=1e-1),
             loss=lambda _, log_prob: -log_prob)
 
-    model.summary()
+    print(model.summary())
 
     model.fit( 
             x=x, 
@@ -39,10 +48,13 @@ def toy_2d():
             batch_size=128, 
             shuffle=True, 
             verbose=True)
-
+            
     # Test
-    viz_2d(flow.sample(5000), 
+    print("Latent Variable Log Stddevs: ", flow.latent_log_stddev())
+
+    viz_2d(flow.transformed_distribution.sample(5000), 
             "Transformed samples (Post-train)")
+
 
 
 def viz_2d(data, title=""):
@@ -51,35 +63,16 @@ def viz_2d(data, title=""):
     plt.show()
 
 
-def get_training_data(data_type, n_samples):
+def get_training_data(data_type=None, n_samples=1000, stddev=[1.,1.]):
     x = np.zeros([n_samples,2], dtype=np.float32)
+    for i in range(n_samples):
+        x[i,0] = np.random.normal(0, stddev[0])
+        x[i,1] = np.random.normal(0, stddev[1])
 
-    if data_type == "Small Shifted Normal":
-        for i in range(n_samples):
-            x[i,0] = np.random.normal(0.5, 0.4)
-            x[i,1] = np.random.normal(0, 0.2)
+        if data_type == "squared":
+            x[i,1] = x[i,1] + x[i,0]**2 - 2
 
-    elif data_type == "Ring":
-        for i in range(n_samples):
-            r = np.random.normal(1,0.1)
-            theta = np.random.uniform(0,2*np.pi)
-            x[i,0] = r*np.cos(theta)
-            x[i,1] = r*np.sin(theta)
-
-    elif data_type == "Moons":
-        for i in range(n_samples):
-            if np.random.choice([False, True]):
-                theta = np.random.uniform(0,np.pi)
-                shift = 0.5
-            else:
-                theta = np.random.uniform(np.pi,2*np.pi)
-                shift = -0.5
-                
-            r = np.random.normal(1,0.1)
-            x[i,0] = shift + r*np.cos(theta)
-            x[i,1] = r*np.sin(theta)
-
-    else:
-        print("Invalid Data Type")
+        elif data_type == "cubed":
+            x[i,1] = x[i,1] + x[i,0]**3
 
     return x

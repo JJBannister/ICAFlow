@@ -16,48 +16,52 @@ class ScaleDiag(tfb.Bijector):
             forward_min_event_ndims=forward_min_event_ndims,
             name=name)
 
-        self.scale_layer = self.ScaleDiagLayer(input_shape)
+        x = Input(input_shape)
+        log_s = self.Vector(input_shape)(x)
+        self.log_s_values = Model(x, log_s, name=self.name + "/log_s", trainable=True)
 
     def _forward(self, x):
-        return self.scale_layer.call(x)
+        log_s = self.log_s_values(x)
+        s = tf.exp(log_s)
+        return x*s
 
     def _inverse(self, y):
-        return self.scale_layer.inverse(y)
+        log_s = self.log_s_values(y)
+        s = tf.exp(log_s)
+        return y/s
 
     def _forward_log_det_jacobian(self, x):
-        return self.scale_layer.log_det_jacobian()
+        log_s = self.log_s_values(x)
+        return tf.reduce_sum(log_s)
 
-    class ScaleDiagLayer(Layer):
-        def __init__(self,
-                input_shape,
-                name="Scale_Diag_Layer"):
-            super().__init__()
+    class Vector(Layer):
+        def __init__(self, output_dim):
+           self.output_dim = output_dim
+           super().__init__()
 
-            self.log_s = self.add_weight(
-                    shape=input_shape,
-                    initializer='zeros',
-                    trainable=True,
-                    name="log_s")
+        def build(self, input_shapes):
+           self.kernel = self.add_weight(
+                   name='kernel', 
+                   shape=self.output_dim, 
+                   initializer='zeros', 
+                   trainable=True)
+           super().build(input_shapes)  
 
-            super().build(input_shape)
+        def call(self, inputs):
+           return self.kernel
 
-        def call(self, x):
-            return tf.multiply(x, tf.exp(self.log_s))
-
-        def inverse(self, x): 
-            return tf.divide(x, tf.exp(self.log_s))
-
-        def log_det_jacobian(self):
-            return tf.reduce_sum(self.log_s)
+        def compute_output_shape(self):
+           return self.output_dim
 
 
-class GIN(tfb.Bijector):
+class AffineCoupling(tfb.Bijector):
     def __init__(self,
             input_shape,
+            incompressible=True,
             forward_min_event_ndims=1,
             validate_args: bool = False,
-            name="GIN",
-            hidden_layer_dim=256):
+            name="Affine_Coupling",
+            hidden_layer_dim=128):
         super().__init__(
             validate_args=validate_args,
             forward_min_event_ndims=forward_min_event_ndims,
@@ -68,7 +72,8 @@ class GIN(tfb.Bijector):
 
         nn = self.ScaleAndTranslateNetwork(
             input_shape // 2,
-            hidden_layer_dim=hidden_layer_dim)
+            hidden_layer_dim=hidden_layer_dim,
+            incompressible=incompressible)
         
         x = tf.keras.Input(input_shape // 2)
         log_s, t = nn(x)
@@ -97,16 +102,17 @@ class GIN(tfb.Bijector):
         log_s, t = self.scale_and_translate_network(x_b)
         return tf.reduce_sum(log_s)
 
-
     class ScaleAndTranslateNetwork(Layer):
 
         def __init__(self,
                 input_shape,
                 hidden_layer_dim, 
+                incompressible=True,
                 activation='elu',
                 name=None):
             super().__init__()
 
+            self.incompressible=incompressible
             self.layer_list = []
             for i in range(2):
                 self.layer_list.append(
@@ -135,9 +141,7 @@ class GIN(tfb.Bijector):
 
             self.t_layer = Dense(
                 input_shape,
-                kernel_initializer=initializers.RandomNormal(
-                    mean=0.0,
-                    stddev=0.05),
+                kernel_initializer='zeros',
                 activation="linear",
                 name="t")
 
@@ -146,7 +150,8 @@ class GIN(tfb.Bijector):
             for layer in self.layer_list:
                 y = layer(y)
             log_s = self.log_s_layer(y)
-            vp_log_s = self.mean_subtract_layer(log_s)
+            if self.incompressible:
+                log_s = self.mean_subtract_layer(log_s)
             t = self.t_layer(y)
-            return vp_log_s, t
+            return log_s, t
 
