@@ -1,4 +1,6 @@
-#! /bin/sh
+#! /bin/bash
 
+cd ./examples
 source activate ICAFlow
-python ./run_examples.py
+python toy_2d.py
+
