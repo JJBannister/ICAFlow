@@ -11,8 +11,7 @@ class AffineCouplingICA():
             input_shape, 
             n_coupling_layers, 
             n_hidden_layers=2,
-            hidden_layer_dim=128, 
-            batch_norm=False):
+            hidden_layer_dim=128):
 
         self.base_distribution = tfd.MultivariateNormalDiag(
                 loc=tf.zeros([input_shape]),
@@ -26,15 +25,10 @@ class AffineCouplingICA():
             return tf.Variable(x, name=name, trainable=False)
 
         for i in range(n_coupling_layers):
-
-            if(batch_norm):
-                bijector_chain.append(tfb.BatchNormalization())
-
             bijector_chain.append(
                     AffineCoupling(
                         input_shape=input_shape,
                         incompressible=True,
-                        n_hidden_layers=n_hidden_layers,
                         hidden_layer_dim=hidden_layer_dim,
                         name="AffineCoupling_"+str(i)))
 
@@ -49,5 +43,5 @@ class AffineCouplingICA():
                 bijector=self.bijector)
 
 
-    def latent_log_stddev(self): 
-        return self.scale_bijector.log_s_layer.kernel
+    def latent_stddev(self):
+        return np.exp(self.scale_bijector.log_s_layer.kernel.numpy())

@@ -1,3 +1,3 @@
 # ICAFlow
 
-Implementations of some invertible non-linear ICA models in tf
+Implementations of invertible non-linear ICA models in tf and tfp
