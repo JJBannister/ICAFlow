@@ -22,12 +22,12 @@ class ScaleDiag(tfb.Bijector):
         self.log_s_model = Model(x, log_s, name=self.name + "/log_s", trainable=True)
 
     def _forward(self, x):
-        log_s = self.log_s_model([])
+        log_s = self.log_s_model(x)
         s = tf.exp(log_s)
         return x*s
 
     def _inverse(self, y):
-        log_s = self.log_s_model([])
+        log_s = self.log_s_model(y)
         s = tf.exp(log_s)
         return y/s
 
@@ -41,14 +41,15 @@ class TrainableVector(Layer):
        self.output_dim = output_dim
        super().__init__()
 
-       self.kernel = self.add_weight( 
-               name='kernel', 
-               shape=output_dim, 
+    def build(self, input_shape):
+       self.kernel = self.add_weight(
+               name='kernel',
+               shape=self.output_dim,
                initializer='zeros', 
                trainable=True)
 
     def call(self, inputs):
-       return self.kernel
+       return tf.multiply(self.kernel, tf.ones(self.output_dim))
 
     def compute_output_shape(self):
        return self.output_dim

@@ -21,7 +21,7 @@ class AffineCoupling(tfb.Bijector):
         assert input_shape % 2 == 0
         self.input_shape = input_shape
 
-        nn = self.ScaleAndTranslateNetwork(
+        nn = ScaleAndTranslateNetwork(
             input_shape // 2,
             hidden_layer_dim=hidden_layer_dim,
             incompressible=incompressible)
