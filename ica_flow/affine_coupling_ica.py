@@ -18,7 +18,6 @@ class AffineCouplingICA():
                 scale_diag = tf.ones([input_shape]))
 
         self.scale_bijector = ScaleDiag(input_shape=input_shape)
-
         bijector_chain = [self.scale_bijector]
 
         def _init_once(x, name):
