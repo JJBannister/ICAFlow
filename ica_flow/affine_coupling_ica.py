@@ -35,7 +35,7 @@ class AffineCouplingICA():
                 np.random.permutation(input_shape).astype('int32'), 
                 name='permutation')))
 
-        self.bijector = tfb.Chain(list(bijector_chain))
+        self.bijector = tfb.Chain(list(reversed(bijector_chain)))
 
         self.transformed_distribution = tfd.TransformedDistribution( 
                 distribution=self.base_distribution,

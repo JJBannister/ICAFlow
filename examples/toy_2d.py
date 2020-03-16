@@ -11,25 +11,22 @@ sys.path.append('../')
 from ica_flow.affine_coupling_ica import AffineCouplingICA as ICA
 
 def toy_2d():
+    
+    stddev = [3, 0.3]
+    x = get_training_data(n_samples=1000, stddev=stddev)
+    viz_2d(x, title="Training Data")
 
-    # Synthetic Data
-    #x = get_training_data(data_transformation='None', n_samples=1000, stddev=[3, 0.1])
-    x = get_training_data(data_transformation='sinusoid', n_samples=5000, stddev=[3, 0.2])
-    #x = get_training_data(data_transformation='square', n_samples=3000, stddev=[1, 0.1])
-
-    # Flow
     ica = ICA(
             input_shape=x.shape[-1], 
-            n_coupling_layers=8,
-            hidden_layer_dim=8)
-
-    viz_2d(ica.transformed_distribution.sample(5000), data2=x,
-           title="Train + Target samples (Pre-train)")
+            n_coupling_layers=4,
+            hidden_layer_dim=64)
 
     # Train
     i = Input(shape=x.shape[-1])
-
     log_prob = ica.transformed_distribution.log_prob(i)
+    y = ica.bijector.forward(i)
+    Model(i,y).summary()
+
     model = Model(i, log_prob) 
     optimizer = Nadam(lr=1e-3)
     model.compile(optimizer=optimizer,
@@ -37,28 +34,30 @@ def toy_2d():
 
     model.fit( 
             x=x, 
-            y=np.zeros((x.shape[0], 0), dtype=np.float32), 
-            epochs=300,
-            batch_size=512,
+            y=np.zeros((x.shape[0], 0), dtype=np.float32),
+            epochs=500,
+            batch_size=256,
+            validation_split=0.1,
             shuffle=True)
 
     print("Latent Variable Stddevs: ", ica.latent_stddev())
+    print("True Variable Stddevs: ", stddev)
 
     # Target Samples
     viz_2d(ica.transformed_distribution.sample(5000), data2=x,
-            title="Train + Target samples (Post-train)")
+            title="Training Data (Blue) and Flow Samples (Red)")
 
     # Grid
-    samples = get_grid_samples(-5, 5)
-    viz_2d(samples, title="Grid")
-    y = ica.bijector.forward(samples)
-    viz_2d(y, data2=x, title="Transformed_Grid")
+    grid = get_grid_samples(-5, 5)
+    viz_2d(grid, data2=ica.bijector.inverse(x), title="Latent grid and inv(Training data)")
+    grid_t = ica.bijector.forward(grid)
+    viz_2d(grid_t, data2=x, title="Transformed grid and Training data")
 
     # Iso-Probability Lines 
-    samples = get_ring_samples()
-    viz_2d(samples, title="Rings")
-    y = ica.bijector.forward(samples)
-    viz_2d(y, data2=x, title="Transformed_Rings")
+    rings = get_ring_samples()
+    viz_2d(rings, data2=ica.bijector.inverse(x), title="Latent rings and inv(Training data)")
+    rings_t = ica.bijector.forward(rings)
+    viz_2d(rings_t, data2=x, title="Transformed rings and Training data")
 
 
 def viz_2d(data1, data2=None, title=""):
@@ -81,7 +80,7 @@ def get_grid_samples(minimum, maximum, n_lines=10, n_samples=5000):
 
 def get_ring_samples(n_samples=5000, n_rings=6):
     thetas = np.linspace(0, 2*np.pi, n_samples)
-    rhos = np.logspace(-3, 1, num=n_rings, base=np.e)
+    rhos = np.linspace(0, n_rings, num=n_rings)
 
     x = [np.zeros([n_samples,2], dtype=np.float32) for _ in range(n_rings)]
     for i in range(n_rings):
@@ -92,18 +91,14 @@ def get_ring_samples(n_samples=5000, n_rings=6):
     return np.concatenate(x,axis=0)
 
 
-def get_training_data(data_transformation=None, n_samples=1000, stddev=[1.,1.]):
+def get_training_data(n_samples=1000, stddev=[1.,1.]):
     x = np.zeros([n_samples,2], dtype=np.float32)
     for i in range(n_samples):
         x[i,0] = np.random.normal(0, stddev[0])
         x[i,1] = np.random.normal(0, stddev[1])
+        x[i,1] = x[i,1] + np.sin(x[i,0])
+        x[i,1] = x[i,1] + (x[i,0]/5)**2
 
-        if data_transformation == "square":
-            x[i,1] = x[i,1] + x[i,0]**2 - 1
-
-
-        if data_transformation == "sinusoid":
-            x[i,1] = x[i,1] + np.sin(x[i,0])
     return x
 
 

@@ -73,8 +73,8 @@ class ScaleAndTranslateNetwork(Layer):
                 Dense(
                     hidden_layer_dim,
                     activation=activation,
-                    kernel_regularizer = regularizers.l2(0.01),
-                    bias_regularizer = regularizers.l2(0.01),
+                    kernel_regularizer = regularizers.l2(0.001),
+                    bias_regularizer = regularizers.l2(0.001),
                     bias_initializer="zeros",
                     name="dense_{}".format(i)))
 
@@ -82,8 +82,8 @@ class ScaleAndTranslateNetwork(Layer):
             input_shape,
             kernel_initializer="zeros",
             bias_initializer="zeros",
-            kernel_regularizer = regularizers.l2(0.01),
-            bias_regularizer = regularizers.l2(0.01),
+            kernel_regularizer = regularizers.l2(0.001),
+            bias_regularizer = regularizers.l2(0.001),
             activation="tanh",
             name="log_s")
 
