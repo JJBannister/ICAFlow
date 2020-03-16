@@ -7,12 +7,12 @@ tfb = tfp.bijectors
 
 class AffineCoupling(tfb.Bijector):
     def __init__(self,
-            input_shape,
-            incompressible=True,
-            forward_min_event_ndims=1,
-            validate_args: bool = False,
-            name="Affine_Coupling",
-            hidden_layer_dim=128):
+                 input_shape,
+                 volume_preserve=True,
+                 forward_min_event_ndims=1,
+                 validate_args: bool = False,
+                 name="Affine_Coupling",
+                 hidden_layer_dim=128):
         super().__init__(
             validate_args=validate_args,
             forward_min_event_ndims=forward_min_event_ndims,
@@ -24,7 +24,7 @@ class AffineCoupling(tfb.Bijector):
         nn = ScaleAndTranslateNetwork(
             input_shape // 2,
             hidden_layer_dim=hidden_layer_dim,
-            incompressible=incompressible)
+            volume_preserve=volume_preserve)
         
         x = tf.keras.Input(input_shape // 2)
         log_s, t = nn(x)
@@ -60,12 +60,12 @@ class ScaleAndTranslateNetwork(Layer):
             input_shape,
             hidden_layer_dim, 
             n_hidden_layers=2, 
-            incompressible=True,
+            volume_preserve=True,
             activation='elu',
             name=None):
         super().__init__()
 
-        self.incompressible=incompressible
+        self.volume_preserve=volume_preserve
         self.layer_list = []
 
         for i in range(n_hidden_layers):
@@ -104,7 +104,7 @@ class ScaleAndTranslateNetwork(Layer):
         for layer in self.layer_list:
             y = layer(y)
         log_s = self.log_s_layer(y)
-        if self.incompressible:
+        if self.volume_preserve:
             log_s = self.mean_subtract_layer(log_s)
         t = self.t_layer(y)
         return log_s, t

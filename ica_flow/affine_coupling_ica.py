@@ -27,7 +27,7 @@ class AffineCouplingICA():
             bijector_chain.append(
                     AffineCoupling(
                         input_shape=input_shape,
-                        incompressible=True,
+                        volume_preserve=True,
                         hidden_layer_dim=hidden_layer_dim,
                         name="AffineCoupling_"+str(i)))
 

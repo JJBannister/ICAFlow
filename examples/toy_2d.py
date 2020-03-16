@@ -28,7 +28,7 @@ def toy_2d():
     Model(i,y).summary()
 
     model = Model(i, log_prob) 
-    optimizer = Nadam(lr=1e-3)
+    optimizer = Nadam(lr=5e-3)
     model.compile(optimizer=optimizer,
             loss=lambda _, log_prob: -log_prob)
 
